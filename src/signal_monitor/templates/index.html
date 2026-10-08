@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}signal-monitor · live{% endblock %}
+{% block brand %}📈 signal-monitor{% endblock %}
+{% block nav %}
+<a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Live</a>
+<a href="{{ url_for('replay_view') }}"{% if request.endpoint == 'replay_view' %} class="on"{% endif %}>Replay</a>
+<a href="{{ url_for('ledger') }}"{% if request.endpoint == 'ledger' %} class="on"{% endif %}>Ledger</a>
+<a href="{{ url_for('monitor.list_signals') }}">Signals JSON</a>
+<a href="{{ url_for('health') }}">Health</a>
+{% endblock %}
+{% block content %}
+<h1>Live blotter</h1>
+<div class="grid">
+  <div class="stat"><div class="k">closed trades</div><div class="v">{{ summary.trades }}</div></div>
+  <div class="stat"><div class="k">win rate</div><div class="v">{{ summary.win_rate }}%</div></div>
+  <div class="stat"><div class="k">profit factor</div><div class="v">{{ summary.profit_factor }}</div></div>
+  <div class="stat"><div class="k">max drawdown</div><div class="v">{{ max_dd }}%</div></div>
+  <div class="stat"><div class="k">current drawdown</div><div class="v">{{ cur_dd }}%</div></div>
+</div>
+<div class="panel">
+  <div class="hd">Record a signal</div>
+  <div class="bd">
+    <form method="post" action="{{ url_for('signal_create') }}">
+      <div class="row">
+        <input name="strategy" placeholder="SMA-cross">
+        <select name="side"><option value="BUY">BUY</option><option value="SELL">SELL</option></select>
+        <input name="price" type="number" step="0.01" placeholder="24810">
+        <input name="size" type="number" step="1" placeholder="1">
+        <button class="btn" type="submit">Record signal</button>
+        <a class="btn q" href="{{ url_for('replay_view') }}">Replay</a>
+      </div>
+      <p class="note" style="margin-top:10px">Same validation as <span class="mono">POST {{ url_for('monitor.add_signal') }}</span>
+        (<span class="mono">monitor.signals.validate</span>). The Telegram notification goes through
+        <span class="mono">monitor.alerts.alert</span>, which swallows network errors, so recording never fails on a
+        notification.</p>
+    </form>
+  </div>
+</div>
+{% if bars %}
+<div class="panel">
+  <div class="hd">Equity curve — {{ curve_points }} point(s) from <span class="mono">monitor.pnl.equity_curve</span></div>
+  <div class="bd">
+    <div class="chart">{% for b in bars %}<i style="height:{{ b.pct }}%" title="{{ b.t }} · {{ b.value }}"></i>{% endfor %}</div>
+    <p class="note">Bar height is cumulative PnL normalised across the closed trades in <span class="mono">trades</span>.</p>
+  </div>
+</div>
+{% endif %}
+<div class="panel">
+  <div class="hd">Recent signals</div>
+  <div class="bd">
+  {% if signals %}
+    <table>
+      <thead><tr><th>id</th><th>strategy</th><th>side</th><th>price</th><th>size</th><th>ts</th></tr></thead>
+      <tbody>
+      {% for s in signals %}
+        <tr>
+          <td class="mono">{{ s.id }}</td>
+          <td class="mono">{{ s.strategy }}</td>
+          <td><span class="tag {% if s.side == 'BUY' %}on{% else %}no{% endif %}">{{ s.side }}</span></td>
+          <td class="mono">{{ s.price }}</td>
+          <td class="mono">{{ s.size }}</td>
+          <td class="mono">{{ s.ts }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">No signals recorded yet. Post one above, or <span class="mono">POST <a href="{{ url_for('monitor.add_signal') }}">/api/signals</a></span> with JSON.</div>
+  {% endif %}
+  </div>
+</div>
+<div class="panel">
+  <div class="hd">Trades</div>
+  <div class="bd">
+  {% if trades %}
+    <table>
+      <thead><tr><th>id</th><th>signal</th><th>entry</th><th>exit</th><th>pnl</th><th>closed</th></tr></thead>
+      <tbody>
+      {% for t in trades %}
+        <tr>
+          <td class="mono">{{ t.id }}</td>
+          <td class="mono">{{ t.signal_id }}</td>
+          <td class="mono">{{ t.entry }}</td>
+          <td class="mono">{{ t.exit }}</td>
+          <td class="mono">{% if t.pnl is not none and t.pnl > 0 %}<span class="tag on">{{ t.pnl }}</span>{% elif t.pnl is not none %}<span class="tag no">{{ t.pnl }}</span>{% else %}—{% endif %}</td>
+          <td class="mono">{{ t.closed_at or 'open' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="note" style="margin-top:10px">Full ledger at <a href="{{ url_for('ledger') }}">/ledger</a>. The JSON view is
+      <span class="mono">GET {{ url_for('monitor.equity') }}</span>.</p>
+  {% else %}
+    <div class="empty">No trades yet. The equity curve stays flat until rows land in <span class="mono">trades</span>.</div>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}

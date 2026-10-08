@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}signal-monitor · ledger{% endblock %}
+{% block brand %}📈 signal-monitor{% endblock %}
+{% block nav %}
+<a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Live</a>
+<a href="{{ url_for('replay_view') }}"{% if request.endpoint == 'replay_view' %} class="on"{% endif %}>Replay</a>
+<a href="{{ url_for('ledger') }}"{% if request.endpoint == 'ledger' %} class="on"{% endif %}>Ledger</a>
+<a href="{{ url_for('monitor.list_signals') }}">Signals JSON</a>
+<a href="{{ url_for('health') }}">Health</a>
+{% endblock %}
+{% block content %}
+<h1>Ledger</h1>
+<div class="grid">
+  <div class="stat"><div class="k">trades</div><div class="v">{{ summary.trades }}</div></div>
+  <div class="stat"><div class="k">win rate</div><div class="v">{{ summary.win_rate }}%</div></div>
+  <div class="stat"><div class="k">avg win</div><div class="v">{{ summary.avg_win }}</div></div>
+  <div class="stat"><div class="k">avg loss</div><div class="v">{{ summary.avg_loss }}</div></div>
+  <div class="stat"><div class="k">max DD</div><div class="v">{{ max_dd }}%</div></div>
+  <div class="stat"><div class="k">current DD</div><div class="v">{{ cur_dd }}%</div></div>
+</div>
+<div class="panel">
+  <div class="hd">Trades</div>
+  <div class="bd">
+  {% if trades %}
+    <table>
+      <thead><tr><th>id</th><th>signal</th><th>entry</th><th>exit</th><th>pnl</th><th>closed</th></tr></thead>
+      <tbody>
+      {% for t in trades %}
+        <tr>
+          <td class="mono">{{ t.id }}</td>
+          <td class="mono">{{ t.signal_id }}</td>
+          <td class="mono">{{ t.entry }}</td>
+          <td class="mono">{{ t.exit }}</td>
+          <td class="mono">{% if t.pnl is not none and t.pnl > 0 %}<span class="tag on">{{ t.pnl }}</span>{% elif t.pnl is not none %}<span class="tag no">{{ t.pnl }}</span>{% else %}—{% endif %}</td>
+          <td class="mono">{{ t.closed_at or 'open' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">No trades in <span class="mono">trades</span>.</div>
+  {% endif %}
+  </div>
+</div>
+<div class="panel">
+  <div class="hd">Equity snapshots</div>
+  <div class="bd">
+  {% if equity_rows %}
+    <table>
+      <thead><tr><th>id</th><th>ts</th><th>value</th></tr></thead>
+      <tbody>
+      {% for e in equity_rows %}
+        <tr><td class="mono">{{ e.id }}</td><td class="mono">{{ e.ts }}</td><td class="mono">{{ e.value }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">No rows in <span class="mono">equity</span>.</div>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}

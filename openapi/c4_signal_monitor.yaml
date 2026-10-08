@@ -1,0 +1,35 @@
+openapi: 3.0.0
+info:
+  title: "📈 signal-monitor"
+  version: 0.1.0
+paths:
+  /api/signals:
+    post:
+      summary: ingest signal
+      responses:
+        "200":
+          description: ok
+  /api/signals:
+    get:
+      summary: list
+      responses:
+        "200":
+          description: ok
+  /api/equity:
+    get:
+      summary: equity curve
+      responses:
+        "200":
+          description: ok
+  /api/stats:
+    get:
+      summary: stats
+      responses:
+        "200":
+          description: ok
+  /api/replay/start:
+    post:
+      summary: replay
+      responses:
+        "200":
+          description: ok

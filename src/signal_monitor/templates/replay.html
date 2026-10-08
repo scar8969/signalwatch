@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}signal-monitor · replay{% endblock %}
+{% block brand %}📈 signal-monitor{% endblock %}
+{% block nav %}
+<a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Live</a>
+<a href="{{ url_for('replay_view') }}"{% if request.endpoint == 'replay_view' %} class="on"{% endif %}>Replay</a>
+<a href="{{ url_for('ledger') }}"{% if request.endpoint == 'ledger' %} class="on"{% endif %}>Ledger</a>
+<a href="{{ url_for('monitor.list_signals') }}">Signals JSON</a>
+<a href="{{ url_for('health') }}">Health</a>
+{% endblock %}
+{% block content %}
+<h1>Replay</h1>
+<div class="row">
+  <span class="tag" id="stream-state">stream idle</span>
+  <span class="mono" id="last-signal">no frame received</span>
+</div>
+<div class="panel">
+  <div class="hd">Playback</div>
+  <div class="bd">
+    <p class="note">Replays {{ signals|length }} stored signal(s) and {{ curve_points }} equity point(s) through the
+      bounded SSE feed at <span class="mono">{{ url_for('signals_stream') }}</span>
+      (<span class="mono">?frames=3&amp;interval=1</span>, closed by an <span class="mono">event: end</span> frame —
+      EventSource reconnects on its own).</p>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="play" type="button">Play</button>
+      <button class="btn q" id="play-fast" type="button">2x</button>
+      <button class="btn q" id="stop" type="button">Stop</button>
+      <span class="note">A cross-origin or offline broker still leaves this page fully rendered —
+        the stream is the only moving part.</span>
+    </div>
+    {% if bars %}
+    <div class="chart" style="margin-top:12px">{% for b in bars %}<i style="height:{{ b.pct }}%" title="{{ b.t }} · {{ b.value }}"></i>{% endfor %}</div>
+    {% else %}
+    <div class="empty" style="margin-top:12px">No closed trades to chart yet.</div>
+    {% endif %}
+  </div>
+</div>
+<div class="panel">
+  <div class="hd">Signals in the replay window</div>
+  <div class="bd">
+  {% if signals %}
+    <table>
+      <thead><tr><th>id</th><th>strategy</th><th>side</th><th>price</th><th>ts</th></tr></thead>
+      <tbody>
+      {% for s in signals %}
+        <tr>
+          <td class="mono">{{ s.id }}</td>
+          <td class="mono">{{ s.strategy }}</td>
+          <td><span class="tag {% if s.side == 'BUY' %}on{% else %}no{% endif %}">{{ s.side }}</span></td>
+          <td class="mono">{{ s.price }}</td>
+          <td class="mono">{{ s.ts }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">No signals stored — record one on the <a href="{{ url_for('index') }}">Live</a> page first.</div>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+var state = document.getElementById('stream-state');
+var last = document.getElementById('last-signal');
+var es = null;
+function open(frames, interval) {
+  if (es) { es.close(); }
+  state.textContent = 'streaming';
+  es = new EventSource('{{ url_for("signals_stream") }}?frames=' + frames + '&interval=' + interval);
+  es.onmessage = function (e) {
+    var s = JSON.parse(e.data);
+    last.textContent = s.side + ' ' + s.strategy + ' @ ' + s.price;
+    last.className = 'mono tag ' + (s.side === 'BUY' ? 'on' : 'no');
+  };
+  es.addEventListener('end', function () {
+    state.textContent = 'stream ended (EventSource reconnects)';
+    if (es) { es.close(); es = null; }
+  });
+  es.onerror = function () {
+    state.textContent = 'stream unavailable';
+    if (es) { es.close(); es = null; }
+  };
+}
+document.getElementById('play').addEventListener('click', function () { open(6, 1); });
+document.getElementById('play-fast').addEventListener('click', function () { open(6, 0.5); });
+document.getElementById('stop').addEventListener('click', function () {
+  if (es) { es.close(); es = null; }
+  state.textContent = 'stream stopped';
+});
+</script>
+{% endblock %}
