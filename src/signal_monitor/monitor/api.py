@@ -1,11 +1,12 @@
+from flask import Blueprint, jsonify, request
+
 from ..models import Signal, Trade
 from .alerts import alert
 from .pnl import drawdown, equity_curve, stats
 from .signals import ingest, validate
 
-from flask import Blueprint, jsonify, request
-
 bp = Blueprint("monitor", __name__)
+
 
 @bp.post("/api/signals")
 def add_signal():
@@ -18,11 +19,24 @@ def add_signal():
     alert(sig)
     return jsonify({"id": sig.id, "status": "open"})
 
+
 @bp.get("/api/signals")
 def list_signals():
-    return jsonify({"signals": [{"id": s.id, "strategy": s.strategy, "side": s.side,
-                                 "price": s.price, "ts": s.ts.isoformat() if s.ts else ""}
-                                for s in Signal.query.order_by(Signal.id.desc()).limit(50).all()]})
+    return jsonify(
+        {
+            "signals": [
+                {
+                    "id": s.id,
+                    "strategy": s.strategy,
+                    "side": s.side,
+                    "price": s.price,
+                    "ts": s.ts.isoformat() if s.ts else "",
+                }
+                for s in Signal.query.order_by(Signal.id.desc()).limit(50).all()
+            ]
+        }
+    )
+
 
 @bp.get("/api/equity")
 def equity():
@@ -31,9 +45,11 @@ def equity():
     max_dd, cur_dd = drawdown(curve)
     return jsonify({"series": curve, "max_dd": max_dd, "current_dd": cur_dd})
 
+
 @bp.get("/api/stats")
 def get_stats():
     return jsonify(stats(Trade.query.all()))
+
 
 @bp.post("/api/replay/start")
 def start_replay():

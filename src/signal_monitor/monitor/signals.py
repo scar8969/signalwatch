@@ -6,8 +6,10 @@ def validate(side, price, size):
     if size <= 0:
         raise ValueError("size must be positive")
 
+
 def ingest(strategy, side, price, size):
     from ..models import Signal, db
+
     sig = Signal(strategy=strategy, side=side, price=price, size=size)
     db.session.add(sig)
     db.session.commit()

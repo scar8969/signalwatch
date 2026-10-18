@@ -1,11 +1,18 @@
 """signal-monitor — command line over monitor/{api,pnl,signals,replay}.py."""
-import argparse, asyncio, sys
+
+import argparse
+import asyncio
+import sys
+
 from . import paths
+
 
 def _db():
     """Open the SQLite session lazily (Flask-SQLAlchemy is not needed for --help)."""
     from flask import Flask
+
     from .models import db
+
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + str(paths.INSTANCE_DIR / "signalmon.db")
     db.init_app(app)
@@ -14,8 +21,10 @@ def _db():
     db.create_all()
     return db
 
+
 def cmd_signal(args):
     from .monitor.signals import ingest, validate
+
     _db()
     try:
         validate(args.side.upper(), args.price, args.size)
@@ -26,8 +35,10 @@ def cmd_signal(args):
     print(f"signal #{sig.id} {sig.side} {sig.strategy} @ {sig.price}")
     return 0
 
+
 def cmd_list(_args):
     from .models import Signal
+
     _db()
     rows = Signal.query.order_by(Signal.id.desc()).limit(50).all()
     if not rows:
@@ -38,9 +49,11 @@ def cmd_list(_args):
         print(f"{s.id:<5} {ts:<26} {s.side:<5} {s.strategy:<12} @ {s.price}")
     return 0
 
+
 def cmd_equity(_args):
     from .models import Trade
     from .monitor.pnl import drawdown, equity_curve
+
     _db()
     curve = equity_curve(Trade.query.all())
     max_dd, cur_dd = drawdown(curve)
@@ -49,18 +62,22 @@ def cmd_equity(_args):
     print(f"max_dd={max_dd}%  current_dd={cur_dd}%")
     return 0
 
+
 def cmd_stats(_args):
     from .models import Trade
     from .monitor.pnl import stats
+
     _db()
     s = stats(Trade.query.all())
     for k, v in s.items():
         print(f"{k:<15} {v}")
     return 0
 
+
 def cmd_replay(args):
     from .models import Signal
     from .monitor.replay import replay
+
     _db()
     signals = Signal.query.order_by(Signal.ts).all()
 
@@ -74,6 +91,7 @@ def cmd_replay(args):
     print(f"replaying {len(signals)} signals at {args.speed}x")
     print(f"done, {asyncio.run(go())} frames")
     return 0
+
 
 def main():
     p = argparse.ArgumentParser(prog="signal-monitor")

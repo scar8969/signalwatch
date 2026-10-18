@@ -1,7 +1,6 @@
 """Flask application for signal-monitor.
 
-Assembled from the project service by _tools/build.py.  The wiring the service
-cannot express lives here: an absolute template folder, an instance folder that
+The wiring a blueprint cannot express lives here: an absolute template folder, an instance folder that
 exists before SQLAlchemy resolves the relative sqlite path, and the HTML pages
 (live blotter, replay, ledger) that read the real signals/trades/equity tables.
 
@@ -15,25 +14,30 @@ Two deliberate properties of every GET path here:
   a bounded response is the normal way to serve SSE without pinning a worker for
   the lifetime of the client.
 """
+
 import json
 import time
 
+from flask import Flask, Response, flash, jsonify, redirect, render_template, request, url_for
+
+from . import paths
 from .models import Equity, Signal, Trade, db
 from .monitor.alerts import alert
 from .monitor.api import bp
 from .monitor.pnl import drawdown, equity_curve, stats
-from . import paths
-
-from flask import (Flask, Response, flash, jsonify, redirect, render_template, request, url_for)
 
 paths.ensure_runtime_dirs()
 
+
 def build_app():
     """Build the application: configuration, database, then routes."""
-    app = Flask(__name__, template_folder=str(paths.TEMPLATES_DIR),
-                instance_path=str(paths.INSTANCE_DIR))
+    app = Flask(
+        __name__, template_folder=str(paths.TEMPLATES_DIR), instance_path=str(paths.INSTANCE_DIR)
+    )
     app.secret_key = "signalmonitor-dev"
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + str(paths.INSTANCE_DIR / "signalmonitor.db")
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + str(
+        paths.INSTANCE_DIR / "signalmonitor.db"
+    )
     db.init_app(app)
     with app.app_context():
         db.create_all()
@@ -63,9 +67,16 @@ def build_app():
         max_dd, cur_dd = drawdown(curve)
         summary = stats(trades)
         points = [{"when": c[0], "value": c[1]} for c in curve]
-        return render_template("index.html", signals=signals, trades=trades,
-                               summary=summary, max_dd=max_dd, cur_dd=cur_dd,
-                               bars=_bars(points), curve_points=len(points))
+        return render_template(
+            "index.html",
+            signals=signals,
+            trades=trades,
+            summary=summary,
+            max_dd=max_dd,
+            cur_dd=cur_dd,
+            bars=_bars(points),
+            curve_points=len(points),
+        )
 
     @app.post("/signals")
     def signal_create():
@@ -106,9 +117,13 @@ def build_app():
         signals = Signal.query.order_by(Signal.id).all()
         trades = Trade.query.filter(Trade.closed_at.isnot(None)).order_by(Trade.closed_at).all()
         curve = equity_curve(trades)
-        return render_template("replay.html", signals=signals, trades=trades,
-                               curve_points=len(curve),
-                               bars=_bars([{"when": c[0], "value": c[1]} for c in curve]))
+        return render_template(
+            "replay.html",
+            signals=signals,
+            trades=trades,
+            curve_points=len(curve),
+            bars=_bars([{"when": c[0], "value": c[1]} for c in curve]),
+        )
 
     @app.get("/ledger")
     def ledger():
@@ -117,8 +132,14 @@ def build_app():
         curve = equity_curve(trades)
         max_dd, cur_dd = drawdown(curve)
         equity_rows = Equity.query.order_by(Equity.ts.desc()).limit(50).all()
-        return render_template("ledger.html", trades=trades, summary=summary,
-                               max_dd=max_dd, cur_dd=cur_dd, equity_rows=equity_rows)
+        return render_template(
+            "ledger.html",
+            trades=trades,
+            summary=summary,
+            max_dd=max_dd,
+            cur_dd=cur_dd,
+            equity_rows=equity_rows,
+        )
 
     @app.get("/api/signals/stream")
     def signals_stream():
@@ -145,9 +166,18 @@ def build_app():
                     fresh = Signal.query.filter(Signal.id > last).order_by(Signal.id).all()
                     for s in fresh:
                         last = max(last, s.id)
-                        yield "data: " + json.dumps({"id": s.id, "side": s.side,
-                                                     "strategy": s.strategy,
-                                                     "price": s.price}) + "\n\n"
+                        yield (
+                            "data: "
+                            + json.dumps(
+                                {
+                                    "id": s.id,
+                                    "side": s.side,
+                                    "strategy": s.strategy,
+                                    "price": s.price,
+                                }
+                            )
+                            + "\n\n"
+                        )
                 sent += 1
                 if sent < frames:
                     time.sleep(interval)
@@ -157,12 +187,14 @@ def build_app():
 
     @app.get("/api/health")
     def health():
-        return jsonify({"status": "ok", "signals": Signal.query.count(),
-                        "trades": Trade.query.count()})
+        return jsonify(
+            {"status": "ok", "signals": Signal.query.count(), "trades": Trade.query.count()}
+        )
 
     if __name__ == "__main__":
         app.run(host="0.0.0.0", port=8000)
 
     return app
+
 
 app = build_app()

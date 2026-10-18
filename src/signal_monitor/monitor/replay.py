@@ -1,5 +1,6 @@
 import asyncio
 
+
 async def replay(signals, speed=1.0):
     last_ts = None
     for s in signals:

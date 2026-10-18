@@ -1,7 +1,9 @@
 from datetime import datetime
+
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
 
 class Signal(db.Model):
     __tablename__ = "signals"
@@ -12,6 +14,7 @@ class Signal(db.Model):
     size = db.Column(db.Integer, default=1)
     ts = db.Column(db.DateTime, default=datetime.utcnow)
 
+
 class Trade(db.Model):
     __tablename__ = "trades"
     id = db.Column(db.Integer, primary_key=True)
@@ -20,6 +23,7 @@ class Trade(db.Model):
     exit = db.Column(db.Float, nullable=True)
     pnl = db.Column(db.Float, nullable=True)
     closed_at = db.Column(db.DateTime, nullable=True)
+
 
 class Equity(db.Model):
     __tablename__ = "equity"
