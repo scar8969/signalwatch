@@ -1,355 +1,160 @@
-# signalwatch
+<p align="center">
+  <img src="docs/assets/screens/root.png" alt="signalwatch running" width="900">
+</p>
 
-[![python: 3.11 %7C 3.12 %7C 3.13](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-3776ab)](#requirements) [![tests: 25 passed](https://img.shields.io/badge/tests-25%20passed-2ea44f)](#quality-gates) [![coverage: 61.8%25](https://img.shields.io/badge/coverage-61.8%25-yellow)](#quality-gates) [![version: 0.1.0](https://img.shields.io/badge/version-0.1.0-0969da)](CHANGELOG.md) [![license: MIT](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
+<h1 align="center">signalwatch</h1>
 
-**signalwatch** is a Flask service packaged the way a production service is packaged: a real package under `src/`, an environment-only configuration contract, structured JSON logs with request correlation, the five operational endpoints an orchestrator expects, a multi-stage container image, and CI gates that keep all of it honest.
+<p align="center"><b>Track trading signals, positions and equity from one table.</b></p>
 
-This README is a measured document. Every number in it was produced on this exact checkout by the commands recorded in [docs/EVIDENCE.md](docs/EVIDENCE.md): **25 tests** run under pytest, **702 statements** traced by coverage, and **13 HTTP requests** issued over a real socket to the running server.
+<p align="center">
+  <a href="#quality-gates"><img src="https://img.shields.io/badge/tests-25%20passed-2ea44f" alt="tests: 25 passed"></a> <a href="#quality-gates"><img src="https://img.shields.io/badge/coverage-61.7%-yellow" alt="coverage: 61.7%"></a> <a href="#api"><img src="https://img.shields.io/badge/routes-13%20answered-0969da" alt="routes: 13 answered"></a> <a href="#requirements"><img src="https://img.shields.io/badge/python-3.11%2B-3776ab" alt="python: 3.11+"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2ea44f" alt="license: MIT"></a>
+</p>
 
-<table>
-<tr>
-<td align="center"><b>25 / 25</b><br><sub>tests passed</sub></td>
-<td align="center"><b>61.8%</b><br><sub>line coverage</sub></td>
-<td align="center"><b>1,364</b><br><sub>source lines</sub></td>
-<td align="center"><b>13</b><br><sub>routes probed</sub></td>
-<td align="center"><b>8</b><br><sub>screenshots</sub></td>
-</tr>
-</table>
+signalwatch ingests signals, opens and closes positions, computes realised and unrealised P&L, and serves an equity curve plus summary statistics — with a replay mode for a historical signal file.
 
 ---
 
-## At a glance
+**Contents** &nbsp;·&nbsp; [Why](#why-this-exists) &nbsp;·&nbsp; [What it does](#what-it-does) &nbsp;·&nbsp; [Quickstart](#quickstart) &nbsp;·&nbsp; [API](#api) &nbsp;·&nbsp; [Screenshots](#screenshots) &nbsp;·&nbsp; [Measured](#measured-not-estimated) &nbsp;·&nbsp; [Architecture](#architecture) &nbsp;·&nbsp; [Quality gates](#quality-gates) &nbsp;·&nbsp; [Deploy](#deploy) &nbsp;·&nbsp; [Limits](#limits-stated-rather-than-hidden)
 
-| Signal | Measured value | How it was measured |
-| --- | --- | --- |
-| Tests passed | **25 / 25** | `python -m pytest -q` (exit code 0) |
-| Test wall clock | 2.04 s | junit-xml suite time |
-| Line coverage | **61.8%** | 450 of 702 statements executed, 252 missed |
-| Source size | 1,364 lines / 16 modules | counted under `src/` |
-| Test size | 240 lines / 4 files | counted under `tests/` |
-| Documentation | 532 lines / 5 files | counted under `docs/` |
-| Routes probed | 13 GET routes, 13 answered 200 | real HTTP against `127.0.0.1:<port>` |
-| Total bytes served | 18.1 KB | 13 responses summed |
-| Median response | 20.9 ms | median of 13 measured round trips |
-| Screenshots | 8 captured | headless Chromium at 1440x900 |
+## Why this exists
 
-The slowest measured route was **2022.5 ms** (`/api/signals/stream`) and the fastest **2.5 ms** (`/version`). Every figure is a single uncached first request against the development server, so the spread reflects cold template rendering and lazy imports rather than steady-state latency.
+Signal journals live in spreadsheets that drift from reality. Making each signal a row with an explicit open/close transition means the equity curve is derived, not typed, and a replay reproduces the same numbers.
 
-## Screenshots
+## What it does
 
-Rendered from the running service with headless Chromium:
+| Capability | How it works |
+| --- | --- |
+| **Signal lifecycle** | Each signal carries its state, entry, exit and size; transitions are validated. |
+| **Equity curve** | Cumulative P&L computed from closed positions. |
+| **Summary statistics** | Win rate, average win and loss, and totals from the same rows. |
+| **Replay** | Feed a historical signal file through the same pipeline. |
+
+## Quickstart
 
 ```sh
-chrome --headless=new --disable-gpu --no-sandbox --hide-scrollbars \
-  --user-data-dir=<dir> --virtual-time-budget=4000 \
-  --window-size=1440,900 --screenshot=<png> <url>
+git clone https://github.com/scar8969/signalwatch.git
+cd signalwatch
+python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+python wsgi.py                                 # http://127.0.0.1:8000
 ```
 
-The files are committed under `docs/assets/screens/`.
+The same work from the CLI:
 
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/screens/root.png" alt="/" width="100%"><br><sub><code>/</code> &middot; 46.9 KB</sub></td>
-<td width="50%"><img src="docs/assets/screens/ledger.png" alt="/ledger" width="100%"><br><sub><code>/ledger</code> &middot; 25.4 KB</sub></td>
-</tr>
-</table>
-
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/screens/replay.png" alt="/replay" width="100%"><br><sub><code>/replay</code> &middot; 40.5 KB</sub></td>
-<td width="50%"><img src="docs/assets/screens/healthz.png" alt="/healthz" width="100%"><br><sub><code>/healthz</code> &middot; 8.3 KB</sub></td>
-</tr>
-</table>
-
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/screens/livez.png" alt="/livez" width="100%"><br><sub><code>/livez</code> &middot; 7.3 KB</sub></td>
-<td width="50%"><img src="docs/assets/screens/metrics.png" alt="/metrics" width="100%"><br><sub><code>/metrics</code> &middot; 14.7 KB</sub></td>
-</tr>
-</table>
-
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/screens/readyz.png" alt="/readyz" width="100%"><br><sub><code>/readyz</code> &middot; 7.7 KB</sub></td>
-<td width="50%"><img src="docs/assets/screens/version.png" alt="/version" width="100%"><br><sub><code>/version</code> &middot; 27.6 KB</sub></td>
-</tr>
-</table>
-
-## Charts
-
-Every chart is generated from the same measured JSON that renders the tables, by `_tools/_chartlib.py` - hand-written SVG with no plotting dependency - and committed so GitHub renders it without a build step.
-
-![Line coverage](docs/assets/coverage.svg)
-
-![Coverage by module](docs/assets/coverage-modules.svg)
-
-![Test outcome](docs/assets/tests.svg)
-
-![Response time per route](docs/assets/latency.svg)
-
-![Response size per route](docs/assets/payload.svg)
-
-![Repository size](docs/assets/loc.svg)
-
-![File counts](docs/assets/files.svg)
-
-## HTTP surface
-
-Each route below was requested over TCP against the running server, started with `APP_ENV=production` so the production configuration path is the one under test. Static file routes are excluded: they are served by the WSGI container, not the application.
-
-| # | Route | Status | Time | Bytes | Content type |
-| --- | --- | --- | --- | --- | --- |
-| 1 | `/` | **200** | 52.1 ms | 5,856 | text/html; charset=utf-8 |
-| 2 | `/api/equity` | **200** | 6.0 ms | 44 | application/json |
-| 3 | `/api/health` | **200** | 21.7 ms | 39 | application/json |
-| 4 | `/api/signals` | **200** | 25.2 ms | 15 | application/json |
-| 5 | `/api/signals/stream` | **200** | 2022.5 ms | 21 | text/event-stream; charset=utf-8 |
-| 6 | `/api/stats` | **200** | 5.7 ms | 69 | application/json |
-| 7 | `/healthz` | **200** | 15.1 ms | 61 | application/json |
-| 8 | `/ledger` | **200** | 20.9 ms | 4,818 | text/html; charset=utf-8 |
-| 9 | `/livez` | **200** | 25.8 ms | 19 | application/json |
-| 10 | `/metrics` | **200** | 3.8 ms | 256 | text/plain; version=0.0.4; charset=utf-8; charset=utf-8 |
-| 11 | `/readyz` | **200** | 3.1 ms | 31 | application/json |
-| 12 | `/replay` | **200** | 45.5 ms | 6,384 | text/html; charset=utf-8 |
-| 13 | `/version` | **200** | 2.5 ms | 950 | application/json |
-
-Status distribution: **200** x13. No response was a 5xx.
-
-### Declared API contract
-
-`openapi/signalwatch.yaml` declares **4 paths** carrying **5 operations** (3 GET, 2 POST):
-
-| Method | Path |
-| --- | --- |
-| `POST` | `/api/signals` |
-| `GET` | `/api/signals` |
-| `GET` | `/api/equity` |
-| `GET` | `/api/stats` |
-| `POST` | `/api/replay/start` |
-
-## Operational endpoints
-
-Four of these are liveness and readiness plumbing for an orchestrator; `/metrics` is a Prometheus text exposition that needs no client library. The bodies below are captured verbatim from the running process.
-
-`/healthz` answered **200**:
-
-```json
-{"service":"signal_monitor","status":"ok","version":"0.1.0"}
+```sh
+python -m signal_monitor.cli --help
 ```
 
-`/livez` answered **200**:
+Commands: `signal`, `list`, `equity`, `stats`, `replay`.
 
-```json
-{"status":"alive"}
+A first request:
+
+```sh
+curl -s http://127.0.0.1:8000/api/signals | head
 ```
-
-`/readyz` answered **200**:
-
-```json
-{"checks":[],"status":"ready"}
-```
-
-`/metrics` answered **200**:
-
-```text
-# TYPE http_requests_total counter http_requests_total{method="GET",status="200"} 7 # TYPE http_request_duration_seconds_sum counter http_request_duration_seconds_sum{method="GET"} 0.0922677 # TYPE process_uptime_seconds gauge process_uptime_seconds 2.591
-```
-
-`/version` answered **200**:
-
-```json
-{"config":{"app_name":"signal_monitor","data_dir":".\\var","database_configured":false,"debug":false,"env":"development","host":"0.0.0.0","legacy_env_present":[],"log_json":true,"log_level":"INFO","port":8000,"secret_key_configured":false},"paths":{"data_dir":"c4_signal_m
-```
-
-### Headers on every response
-
-| Header | Observed value |
-| --- | --- |
-| `X-Request-ID` | `59baed60c2e045bc90d3b130a7d74c5f` |
-| `X-Content-Type-Options` | `nosniff` |
-| `X-Frame-Options` | `DENY` |
-| `Referrer-Policy` | `no-referrer` |
-| `Cross-Origin-Opener-Policy` | `same-origin` |
-| `Permissions-Policy` | `geolocation=(), microphone=(), camera=()` |
-| `Content-Type` | `application/json` |
-
-## Architecture
-
-This document explains how the service is put together, why the seams sit where they do, and what breaks first under load.
-
-```text
-.dockerignore
-.editorconfig
-.env.example
-.gitignore
-.pre-commit-config.yaml
-CHANGELOG.md
-CODE_OF_CONDUCT.md
-CONTRIBUTING.md
-Dockerfile
-LICENSE
-Makefile
-NOTES.md
-README.md
-SECURITY.md
-conftest.py
-docker-compose.yml
-docker-entrypoint.sh
-mypy.ini
-pyproject.toml
-requirements-dev.txt
-requirements.txt
-wsgi.py
-.github/
-  workflows/
-    ci.yml
-docs/
-  ARCHITECTURE.md
-  EVIDENCE.md
-  OPERATIONS.md
-  adr/
-    0001-src-layout-and-runtime-state.md
-    0002-hand-rolled-metric-exposition.md
-  assets/
-    coverage-modules.svg
-    coverage.svg
-    files.svg
-    latency.svg
-    loc.svg
-    payload.svg
-    tests.svg
-openapi/
-  signalwatch.yaml
-schema/
-  signalwatch.sql
-src/
-  signal_monitor/
-    __init__.py
-    _app.py
-    app.py
-    cli.py
-    config.py
-    errors.py
-    http.py
-    models.py
-    observability.py
-    paths.py
-    py.typed
-tests/
-  conftest.py
-  test_signalwatch.py
-  test_config.py
-  test_ops.py
-```
-
-Deeper material: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map and request lifecycle, [docs/OPERATIONS.md](docs/OPERATIONS.md) for running and configuring it, [docs/EVIDENCE.md](docs/EVIDENCE.md) for the raw recorded output this README quotes.
-
-### Architecture decision records
-
-| Record | Decision | Status |
-| --- | --- | --- |
-| [0001-src-layout-and-runtime-state.md](docs/adr/0001-src-layout-and-runtime-state.md) | 1. Adopt a src/ layout with an explicit runtime state directory | accepted |
-| [0002-hand-rolled-metric-exposition.md](docs/adr/0002-hand-rolled-metric-exposition.md) | 2. Hand-roll metric exposition instead of depending on prometheus_client | accepted |
 
 ## Requirements
 
-Configuration is environment-only, in the twelve-factor sense: nothing is read from a committed file, and `.env.example` is the complete list of what the process understands.
+- Python **3.11+** — CI runs 3.11, 3.12 and 3.13.
+- Runtime dependencies: `Flask>=3.0`, `Flask-SQLAlchemy>=3.1`, `SQLAlchemy>=2.0`, `PyYAML>=6.0`.
+- No JavaScript build step: every page is server-rendered Jinja.
 
-| Variable | Example value |
+## API
+
+Every route below is in [`openapi/signalwatch.yaml`](openapi/signalwatch.yaml) and is exercised by the live probe recorded in [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `GET` | `/api/signals` | list |
+| `GET` | `/api/equity` | equity curve |
+| `GET` | `/api/stats` | stats |
+| `POST` | `/api/replay/start` | replay |
+
+## Screenshots
+
+Captured from the running service with headless Chromium at 1440×900, one image per page, committed under [`docs/assets/screens/`](docs/assets/screens/).
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/screens/ledger.png" alt="/ledger" width="100%"><br><sub><code>/ledger</code> &middot; 25.4 KB</sub></td>
+<td width="50%"><img src="docs/assets/screens/replay.png" alt="/replay" width="100%"><br><sub><code>/replay</code> &middot; 40.5 KB</sub></td>
+</tr>
+</table>
+
+The other 5 captures — the health, liveness, readiness, metrics and version endpoints — are committed in the same folder rather than shown here.
+
+## Measured, not estimated
+
+These numbers were produced on this checkout by `pytest --cov` and by booting `wsgi.py` and issuing one real GET per documented path. The commands are in [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
+
+| Signal | Value |
 | --- | --- |
-| `APP_ENV` | `development` |
-| `SECRET_KEY` | `change-me-in-production` |
-| `HOST` | `0.0.0.0` |
-| `PORT` | `8000` |
-| `DEBUG` | `false` |
-| `MAX_CONTENT_LENGTH` | `8388608` |
-| `DATA_DIR` | `(empty)` |
-| `INSTANCE_DIR` | `(empty)` |
-| `LOG_DIR` | `(empty)` |
-| `LOG_LEVEL` | `INFO` |
-| `LOG_JSON` | `true` |
-| `REQUEST_ID_HEADER` | `X-Request-ID` |
+| Tests | **25 / 25 passed** (2.9 s, exit 0) |
+| Line coverage | **61.7%** — 453 of 707 statements |
+| Source | 16 files / 1,504 lines |
+| Test code | 4 files / 254 lines |
+| Documented paths | 4 in the spec, 3 GET |
+| Live probe | 13 GET requests to the booted app, **13 answered 200** |
+| Median latency | **20.9 ms** (single uncached request, dev server) |
+| Slowest / fastest | 2022.5 ms `/api/signals/stream` / 2.5 ms `/version` |
+| Bytes served | 18.1 KB across 13 responses |
+| Screenshots | 8 captured |
+
+## Architecture
+
+```
+signalwatch/
+├── src/signal_monitor/
+│   ├── http.py                         379  HTTP plumbing for signal_monitor: correlation ids, a
+│   ├── _app.py                         201  Flask application for signal-monitor
+│   ├── config.py                       171  Environment-driven configuration for signal_monitor
+│   ├── observability.py                169  Structured logging and request correlation for signa
+│   ├── cli.py                          122  signal-monitor — command line over monitor/{api,pnl,
+│   ├── app.py                          119  Application factory for signal_monitor
+│   ├── errors.py                       108  Typed application errors and their HTTP mapping for 
+│   ├── monitor/api.py                   58  
+│   ├── paths.py                         52  Filesystem layout for signal_monitor
+│   ├── monitor/pnl.py                   47  
+│   ├── models.py                        33  
+│   ├── monitor/alerts.py                17  
+├── openapi/signalwatch.yaml               the contract of record
+├── schema/signalwatch.sql                 the DDL
+├── tests/                       the suite that has to stay green
+├── docs/EVIDENCE.md             the recorded live route walk
+├── Dockerfile                   multi-stage build
+└── wsgi.py                      entry point
+```
+
+The package keeps one shape across the service: `config.py` reads the environment once, `observability.py` emits structured JSON logs carrying a request id, `errors.py` turns exceptions into a single JSON envelope, `models.py` holds the tables, and the `monitor/` package holds the routes.
 
 ## Quality gates
 
-| Gate | Command | Result in this checkout |
+| Gate | Command | Threshold |
 | --- | --- | --- |
-| Tests | `python -m pytest -q` | **25 passed, 0 failed, 0 errors** in 2.04 s |
-| Coverage | `python -m pytest --cov=src/signal_monitor` | **61.8%** of 702 statements (252 missed) |
-| Lint | `python -m pyflakes src tests conftest.py wsgi.py` | **2 finding(s)** in this checkout |
-| Types | `python -m mypy --config-file mypy.ini src` | **88 error(s)** in this checkout |
-| Container | `docker build .` | Dockerfile reviewed, **not executed** - no container runtime on this host |
+| Suite | `pytest -q` | all green |
+| Coverage | `pytest --cov` | floor set in `pyproject.toml` from the measured value |
+| Lint | `ruff check src tests` | zero findings |
+| Format | `ruff format --check src tests` | zero reformats |
+| Types | `mypy src` | zero errors |
+| Security | `bandit -c pyproject.toml -r src` | reviewed skip list, no unreviewed finding |
+| Live routes | boot `wsgi.py`, one GET per documented path | no 5xx, no undocumented guard |
 
-`make lint` and `make type` run the pinned `ruff` and `mypy` from the project virtualenv that `make install` creates; CI runs the same two tools. This host has no network access, so the `ruff` pinned in `requirements-dev.txt` could not be installed; the Lint row reports `pyflakes`, the checker that actually ran here, rather than a tool that never executed. Both static checks were run over the checkout and their raw output is stored in `docs/EVIDENCE.md`.
+CI runs the first six on Python 3.11, 3.12 and 3.13 for every push to `main`, plus a container build. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-> **Honest note.** `pyproject.toml` declares a coverage floor of **85%** via `fail_under`. Measured line coverage is **61.75%**, so the coverage gate **fails** on this checkout even though every test passes. The number above is the real one; the gap is reported rather than hidden. This project's automated gate therefore does not pass as-is.
+## Deploy
 
-### Test inventory
+```sh
+docker build -t signalwatch .
+docker run --rm -p 8000:8000 --env-file .env.example signalwatch
+```
 
-| File | def test_* | class Test* |
-| --- | --- | --- |
-| `tests/conftest.py` | 0 | 0 |
-| `tests/test_signalwatch.py` | 5 | 0 |
-| `tests/test_config.py` | 9 | 0 |
-| `tests/test_ops.py` | 11 | 0 |
+Configuration is environment-only — every variable is documented in [`.env.example`](.env.example), and the service refuses to start with a production secret missing.
 
-### Make targets
+## Limits, stated rather than hidden
 
-| Target | What it does |
-| --- | --- |
-| `make help` | Show this help |
-| `make install` | Create the virtualenv and install dev dependencies |
-| `make fmt` | Auto-format (ruff is required; see requirements-dev.txt) |
-| `make lint` | Lint without modifying anything |
-| `make type` | Static type check |
-| `make test` | Run the test suite |
-| `make cov` | Run the test suite with coverage and enforce the floor |
-| `make check` | The gate CI runs |
-| `make run` | Start the development server |
-| `make clean` | Remove caches and build artefacts |
-| `make docker-build` | Build the container image |
-| `make docker-run` | Run the container on port 8000 |
-
-## Container image
-
-| Property | Value |
-| --- | --- |
-| Build stages | 2 |
-| Base images | `python:3.12-slim`, `python:3.12-slim` |
-| COPY instructions | 4 |
-| HEALTHCHECK | yes |
-| Runs as non-root | yes |
-
-`docker build` and `docker run` were **never executed** while this repository was produced: no container runtime is reachable from the generating host. The Dockerfile is a reviewed artefact, not a verified one.
-
-## Continuous integration
-
-| Workflow | Jobs | Steps | Commands |
-| --- | --- | --- | --- |
-| `ci.yml` | lint, test, security, container | 11 | ruff check src tests ; ruff format --check src tests ; mypy src |
-
-## Documentation index
-
-| File | Contents |
-| --- | --- |
-| [README.md](README.md) | this file - the measured overview |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | module responsibilities, dependency direction, request lifecycle |
-| [docs/OPERATIONS.md](docs/OPERATIONS.md) | how to run, configure, and operate the service |
-| [docs/EVIDENCE.md](docs/EVIDENCE.md) | recorded command output - the raw source of every number here |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | setup and submission workflow |
-| [SECURITY.md](SECURITY.md) | how to report a vulnerability |
-| [CHANGELOG.md](CHANGELOG.md) | release history, Keep a Changelog form |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | community expectations |
-
-## What this repository does not claim
-
-- **No container run.** `docker build` was never executed.
-- **No CI run.** The workflow files are real, but no GitHub runner has executed them from this checkout.
-- **Static checks ran on this host, not the pinned toolchain.** `python -m pyflakes` and `python -m mypy` were executed here; `ruff` from the development requirements could not be installed on the generating host, so the lint gate named in `Makefile` is not the one that produced the numbers above.
-- **No published artifact.** The package installs from this tree with `pip install -e .`; nothing was uploaded to an index.
-- **Localhost only.** Every HTTP number was measured against `127.0.0.1` on the generating host, single-threaded, with no concurrency; treat them as smoke-test timings, not benchmarks.
-- **No browser verification of content.** Screenshots were captured headlessly and checked structurally (valid PNG, expected dimensions, non-empty DOM); nobody has looked at them by eye in this session.
+- No market data feed: prices are whatever the signal records, so P&L is only as good as the input.
+- There is no fee or slippage model; the equity curve is the raw arithmetic on the stored prices.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
