@@ -66,6 +66,7 @@ Every route below is in [`openapi/signalwatch.yaml`](openapi/signalwatch.yaml) a
 | Method | Path | What it does |
 | --- | --- | --- |
 | `GET` | `/api/signals` | list |
+| `POST` | `/api/signals` | ingest signal |
 | `GET` | `/api/equity` | equity curve |
 | `GET` | `/api/stats` | stats |
 | `POST` | `/api/replay/start` | replay |
@@ -89,7 +90,7 @@ These numbers were produced on this checkout by `pytest --cov` and by booting `w
 
 | Signal | Value |
 | --- | --- |
-| Tests | **25 / 25 passed** (2.9 s, exit 0) |
+| Tests | **25 / 25 passed** (2.1 s, exit 0) |
 | Line coverage | **61.7%** — 453 of 707 statements |
 | Source | 16 files / 1,504 lines |
 | Test code | 4 files / 254 lines |
