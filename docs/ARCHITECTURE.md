@@ -1,6 +1,6 @@
 # Architecture -- Signal_monitor
 
-C4 signal-monitor skeleton — trading signal monitor.
+C4 signal-monitor service — trading signal monitor.
 
 This document explains how the service is put together, why the seams sit where
 they do, and what breaks first under load.
@@ -9,7 +9,7 @@ they do, and what breaks first under load.
 
 ## 1. Context
 
-c4_signal_monitor is a single-process Flask service. It owns its own database (SQLite by
+signalwatch is a single-process Flask service. It owns its own database (SQLite by
 default, any SQLAlchemy-supported backend via `DATABASE_URL`) and is deployed
 behind a reverse proxy or an orchestrator.
 
@@ -75,7 +75,7 @@ flowchart TB
 | `templates/index.html` | asset |
 | `templates/ledger.html` | asset |
 | `templates/replay.html` | asset |
-| `tests/test_c4_signal_monitor.py` | module |
+| `tests/test_signalwatch.py` | module |
 | `_app.py` | asset |
 
 ---
@@ -138,9 +138,9 @@ writable lives under `/app`.
 
 | Table | Owner |
 | --- | --- |
-| `signals` | owned by `c4_signal_monitor` |
-| `trades` | owned by `c4_signal_monitor` |
-| `equity` | owned by `c4_signal_monitor` |
+| `signals` | owned by `signalwatch` |
+| `trades` | owned by `signalwatch` |
+| `equity` | owned by `signalwatch` |
 
 Tables are created by the application's own bootstrap on first use. No migration
 tool is wired in; the schema is additive, and the service tolerates a missing or

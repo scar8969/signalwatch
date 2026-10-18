@@ -1,6 +1,6 @@
 """Flask application for signal-monitor.
 
-Assembled from the project skeleton by _tools/build.py.  The wiring the skeleton
+Assembled from the project service by _tools/build.py.  The wiring the service
 cannot express lives here: an absolute template folder, an instance folder that
 exists before SQLAlchemy resolves the relative sqlite path, and the HTML pages
 (live blotter, replay, ledger) that read the real signals/trades/equity tables.

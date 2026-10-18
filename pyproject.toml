@@ -3,13 +3,13 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "c4-signal-monitor"
+name = "signalwatch"
 version = "0.1.0"
-description = "C4 signal-monitor skeleton — trading signal monitor."
+description = "Trading signal monitor: ingest signals, track open positions, compute equity and stats."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "project-skeletons maintainers" }]
+authors = [{ name = "Priyanshu Rout" }]
 keywords = ["flask", "service", "signal_monitor"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -46,7 +46,7 @@ Documentation = "https://example.invalid/signal_monitor/docs"
 Issues = "https://example.invalid/signal_monitor/issues"
 
 [project.scripts]
-c4-signal-monitor = "signal_monitor.cli:main"
+signalwatch = "signal_monitor.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

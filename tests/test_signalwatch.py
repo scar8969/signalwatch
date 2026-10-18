@@ -1,4 +1,4 @@
-"""C4 signal-monitor — tests. Run: pytest test_c4_signal_monitor.py"""
+"""C4 signal-monitor — tests. Run: pytest test_signalwatch.py"""
 import sys, os
 
 import pytest

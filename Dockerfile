@@ -34,7 +34,7 @@ RUN groupadd --system --gid 1001 app \
 WORKDIR /app
 
 COPY --from=builder /wheels /wheels
-RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels c4-signal-monitor \
+RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels signalwatch \
  && rm -rf /wheels \
  && mkdir -p /var/lib/signal_monitor/instance /var/lib/signal_monitor/log \
  && chown -R app:app /var/lib/signal_monitor /app

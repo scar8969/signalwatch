@@ -78,7 +78,7 @@ process_uptime_seconds 2.591
 `/version` answered **200**:
 
 ```
-{"config":{"app_name":"signal_monitor","data_dir":"C:\\Users\\priya\\Desktop\\project-skeletons\\projects\\c4_signal_monitor\\var","database_configured":false,"debug":false,"env":"development","host":"0.0.0.0","legacy_env_present":[],"log_json":true,"log_level":"INFO","port":8000,"secret_key_configured":false},"paths":{"data_dir":"C:\\Users\\priya\\Desktop\\project-skeletons\\projects\\c4_signal_m
+{"config":{"app_name":"signal_monitor","data_dir":".\\var","database_configured":false,"debug":false,"env":"development","host":"0.0.0.0","legacy_env_present":[],"log_json":true,"log_level":"INFO","port":8000,"secret_key_configured":false},"paths":{"data_dir":"c4_signal_m
 ```
 
 ## Headers observed on /healthz
