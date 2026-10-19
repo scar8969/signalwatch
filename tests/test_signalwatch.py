@@ -1,14 +1,14 @@
 """C4 signal-monitor — tests. Run: pytest test_signalwatch.py"""
 
-from datetime import datetime
-
 import pytest
+
+from signal_monitor.clock import utcnow
 
 
 class FakeTrade:
     def __init__(self, pnl, closed=True):
         self.pnl = pnl
-        self.closed_at = datetime.utcnow() if closed else None
+        self.closed_at = utcnow() if closed else None
         self.id = 0
 
 

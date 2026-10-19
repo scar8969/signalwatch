@@ -120,7 +120,7 @@ Produced on this checkout by `pytest --cov` and by booting `wsgi.py` and issuing
 | --- | --- |
 | Tests | **25 / 25 passed** (2.1 s, exit 0) |
 | Line coverage | **61.7%** — 453 of 707 statements |
-| Source | 16 files / 1,505 lines |
+| Source | 16 files / 1,523 lines |
 | Test code | 4 files / 254 lines |
 | Documented paths | 4 in the spec, 3 GET |
 | Live probe | 13 GET requests to the booted app, **13 answered 200** |
@@ -163,7 +163,7 @@ signalwatch/
 │   ├── paths.py                         52  Filesystem layout for signal_monitor
 │   ├── monitor/pnl.py                   47  
 │   ├── models.py                        33  
-│   ├── monitor/alerts.py                17  
+│   ├── clock.py                         18  Naive UTC timestamps
 ├── openapi/signalwatch.yaml               the contract of record
 ├── schema/signalwatch.sql                 the DDL
 ├── tests/                       the suite that has to stay green

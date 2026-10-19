@@ -1,6 +1,6 @@
-from datetime import datetime
-
 from flask_sqlalchemy import SQLAlchemy
+
+from .clock import utcnow
 
 db = SQLAlchemy()
 
@@ -12,7 +12,7 @@ class Signal(db.Model):
     side = db.Column(db.String(8), default="")  # BUY|SELL
     price = db.Column(db.Float, default=0.0)
     size = db.Column(db.Integer, default=1)
-    ts = db.Column(db.DateTime, default=datetime.utcnow)
+    ts = db.Column(db.DateTime, default=utcnow)
 
 
 class Trade(db.Model):
@@ -28,5 +28,5 @@ class Trade(db.Model):
 class Equity(db.Model):
     __tablename__ = "equity"
     id = db.Column(db.Integer, primary_key=True)
-    ts = db.Column(db.DateTime, default=datetime.utcnow)
+    ts = db.Column(db.DateTime, default=utcnow)
     value = db.Column(db.Float, default=0.0)
